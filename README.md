@@ -1,6 +1,6 @@
 oracle-tools
 ============
-These are SQL\*Plus scripts (and other goodies) that make working with ORacle via SQL\*Plus a bit less crap.
+These are SQL\*Plus scripts (and other goodies) that make working with Oracle via SQL\*Plus a bit less crap.
 
 
 Install
@@ -16,7 +16,8 @@ On Windows, make a new environment variable for SQLPATH (the Oracle install dire
 
 Copy all the sqlpath files into $SQLPATH.
 
- * Read more about login.sql: http://docs.oracle.com/cd/B28359_01/server.111/b31189/ch2.htm#i1133106
+ * Read more about login.sql:
+  * http://docs.oracle.com/cd/B28359_01/server.111/b31189/ch2.htm#i1133106
  * Read more about sqlplus commands and settings:
   * http://www.toadworld.com/platforms/oracle/w/wiki/3963.sql-plus.aspx
   * http://www.orafaq.com/wiki/SQL*Plus_FAQ
@@ -54,10 +55,9 @@ I prefer to use wrapper scripts to invoke sqlplus, with these advantages:
 
  * don't have to enter long connection URLs
  * pipe output through GNU source-highlight (when appropriate)
- * can send in commands via stdin or run
  * can use interactively or batch; enables rlwrap when appropriate
 
-I use a worker script - runsqlplus - and an invoker script for each login
+I use a worker script - $SQLPATH/runsqlplus - and an invoker script for each login
 (this contains the authentication information, so you need to be careful with permissions).
 
 This is an example invoker script:
@@ -74,43 +74,43 @@ Oracle's built-in describe is a bit poo, so I've built a better one, in $SQLPATH
 
 Create an sqlplus wrapper script for each function.
 This makes it behave a bit more like the postgres describe (and extended describe).
-(One nice thing about using an sqlplus script as a wrapper is the you do not need to quote the object name.)
+(One nice thing about using an sqlplus script as a wrapper is that you do not need to quote the object name.)
 
 e.g.
 
  * basic describe: $SQLPATH/d.sql
 
-    set define on feedback off serveroutput on size unlimited format wrapped
-    @extended_describe DESC &1 N
-    prompt
-    set feedback on
+        set define on feedback off serveroutput on size unlimited format wrapped
+        @extended_describe DESC &1 N
+        prompt
+        set feedback on
 
- * describe: $SQLPATH/d+.sql
+ * extended describe: $SQLPATH/d+.sql
 
-    set define on feedback off serveroutput on size unlimited format wrapped
-    @extended_describe DESC &1 Y
-    prompt
-    set feedback on
+        set define on feedback off serveroutput on size unlimited format wrapped
+        @extended_describe DESC &1 Y
+        prompt
+        set feedback on
 
  * search: $SQLPATH/s.sql
 
-    set define on feedback off serveroutput on size unlimited format wrapped
-    @extended_describe SEARCH &1 ''
-    set feedback on
+        set define on feedback off serveroutput on size unlimited format wrapped
+        @extended_describe SEARCH &1 ''
+        set feedback on
 
  * source (with line numbers): $SQLPATH/src.sql
 
-    set define on feedback off serveroutput on size unlimited format wrapped
-    @extended_describe SOURCE &1 ''
-    set feedback on
+        set define on feedback off serveroutput on size unlimited format wrapped
+        @extended_describe SOURCE &1 ''
+        set feedback on
 
 and then you invoke in an sqlplus session like so:
 
-    @d+ npc_termination_point_use2
+    @d+ all_objects
 
 Or, if you use the sqlplus wrapper scripts described above:
 
-    echo '@d+ npc_term_point_use2' | npcprod
+    echo '@d+ all_objects' | npcprod
 
 
 Source Highlight
