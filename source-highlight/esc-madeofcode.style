@@ -1,0 +1,57 @@
+// made-of-code seems to have:
+// 
+// 106  light blue: function names
+//   4  mid blue: numbers
+//      dark blue: function parameters (unused here)
+// 196  red: keywords, symbols
+// 106  green: type names
+// 118  bright green: strings
+//  11  yellow: built-in functions
+// 170  purple: comments
+//      white: variables
+
+// bgcolor "234" ;
+
+//normal white ;
+keyword red ;
+type darkgreem ;
+classname cyan ;
+definition cyan ;
+constant yellow ;
+string brightgreen ;
+regexp cyan ;
+specialchar red ;
+comment purple ;
+number blue ;
+preproc orange ;
+symbol red ;
+assignment red ;
+function cyan ;
+builtin yellow ;
+cbracket gray ;
+variable blue ;
+todo bg:cyan ;
+
+// line numbers
+linenum yellow;
+
+// other elements for ChangeLog and Log files
+date cyan ;
+time blue ;
+ip green ;
+file blue ;
+name green ;
+
+// Internet related
+url blue ;
+
+// for diffs
+oldfile orange;
+newfile green;
+difflines blue; 
+
+// for css
+selector purple;
+property blue;
+value green ;
+

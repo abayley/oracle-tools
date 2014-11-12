@@ -1,0 +1,64 @@
+type = "VARCHAR|VARCHAR2|NUMBER|NUMERIC|TINYINT|TEXT|DATE|SMALLINT|MEDIUMINT|INT|BIGINT",
+"FLOAT|DOUBLE|DECIMAL|DATETIME|TIMESTAMP|TIME|YEAR|UNSIGNED",
+"CHAR|TINYBLOB|TINYTEXT|BLOB|MEDIUMBLOB|MEDIUMTEXT",
+"LONGBLOB|LONGTEXT|ENUM|BOOL|BINARY|VARBINARY" nonsensitive
+
+(definition,normal,function) = `(\<(?:function|procedure))([[:blank:]]+)([$[:alnum:]_]+)`
+
+keyword = "AFTER|ALL|AS|ASC|ALTER|AND|ADD|AUTO_INCREMENT",
+	"BEFORE|BETWEEN|BINARY|BOTH|BY|BOOLEAN",
+	"CHANGE|CHECK|COLUMNS|COLUMN|CROSS|CREATE OR REPLACE|CREATE",
+	"DATABASES|DATABASE|DATA|DELAYED|DESCRIBE|DESC|DISTINCT|DELETE|DROP|DEFAULT",
+	"ENCLOSED|ESCAPED|EXISTS|EXPLAIN|END IF|END|ELSE",
+	"FOR EACH ROW|FIELDS|FIELD|FLUSH|FOR|FOREIGN|FROM",
+	"GROUP|GRANT",
+	"HAVING",
+	"IGNORE|INDEX|INFILE|INSERT|INNER|INTO|IDENTIFIED|IN|IS|IF",
+	"JOIN",
+	"KEYS|KILL|KEY",
+	"LEADING|LIKE|LIMIT|LINES|LOAD|LOCAL|LOCK|LOW_PRIORITY|LANGUAGE|LOOP",
+	"MODIFY",
+	"NATURAL|NOT|NULL",
+	"OPTIMIZE|OPTION|OPTIONALLY|ORDER|OUTFILE|OR|OUTER|ON",
+	"PACKAGE BODY|PACKAGE|PROCEDURAL|PRIMARY",
+	"READ|REFERENCES|REGEXP|RENAME|RETURN|REVOKE|RLIKE",
+	"SHOW|SONAME|STATUS|STRAIGHT_JOIN|SELECT|SETVAL|SET",
+	"TABLES|TERMINATED|TO|TRAILING|TRUNCATE|TABLE|TEMPORARY|TRIGGER|TRUSTED|THEN",
+	"UNION|UNIQUE|UNLOCK|USE|USING|UPDATE",
+	"VALUES|VARIABLES|VIEW",
+	"WITH|WRITE|WHERE",
+	"ZEROFILL|TYPE",
+	"XOR"
+	nonsensitive
+
+definition = "FUNCTION|PROCEDURE"
+	nonsensitive
+
+builtin = "upper|lower|to_char|to_number|to_date|substr|instr|length|nvl|coalesce|case|when",
+	"avg|count|max|min|stddev|rownum|sysdate|replace|right|left|translate|nextval|currval|ord|chr"
+	nonsensitive
+
+include "c_string.lang"
+
+environment string delim "`" "`" begin
+  specialchar = $SPECIALCHAR
+end
+
+include "script_comment.lang"
+
+include "c_comment.lang"
+
+comment start "--"
+
+#include "symbols.lang"
+# do not include ( ) ; , 
+symbol = "~","!","%","^","*","-","+","=","[",
+        "]","\\",":",".","/","?","&","<",">","\|"
+
+assignment = ":="
+
+include "number.lang"
+
+variable = '[[:word:]\$]+(\.[[:word:]\$]+)+'
+#variable = '[[:word:]]+'
+

@@ -1,0 +1,58 @@
+# If no args and stdin is tty then assume an interactive mode (use rlwrap, don't pass -s):
+#
+# stdin  stdout   command
+# -----------------------
+# tty    tty      rlwrap sqlplus URL
+# tty    pipe     rlwrap sqlplus URL
+# pipe   tty      sqlplus -s URL | source-highlight
+# pipe   pipe     sqlplus -s URL
+#
+# If we've been passed an argument then assume it is a file to run (ignore stdin):
+#
+# stdin  stdout   command
+# -----------------------
+# tty    tty      sqlplus -s URL @$1 | source-highlight
+# tty    pipe     sqlplus -s URL @$1
+# pipe   tty      sqlplus -s URL @$1 | source-highlight
+# pipe   pipe     sqlplus -s URL @$1
+
+if [ $# -eq 0 ]
+then
+    echo "usage: $0 URL [file]"
+    echo "  where URL = user/password\\\"@server.domain.com:1521/sid\\\""
+    echo "  When run without a file reads from stdin."
+    echo "  If no stdin or file then runs sqlplus inside rlwrap (interactive mode)."
+    echo "  If output is to a terminal then it is piped through source-highlight."
+    echo
+    echo "  Examples:"
+    echo "  $ echo \"select sys_context('userenv', 'db_name') as login from dual\" | runsqlplus URL"
+    echo "  $ echo \"@d+ dual\" | runsqlplus URL"
+    echo "  $ runsqlplus URL < query.sql > output.txt"
+    echo "  $ runsqlplus URL query.sql > output.txt"
+    echo "  $ runsqlplus URL query.sql"
+    exit 1
+fi
+
+srchighlight="source-highlight --src-lang=sql --out-format=esc256 --style-file=esc-madeofcode256.style"
+
+url=$1
+shift
+if [ $# -eq 0 ]
+then
+    sqlpluscmd="sqlplus -s"
+    if [ -t 0 ]; then
+        sqlpluscmd="rlwrap sqlplus"
+    fi
+    if [ ! -t 0 ] && [ -t 1 ]; then
+        $sqlpluscmd "$url" | $srchighlight
+    else
+        $sqlpluscmd "$url"
+    fi
+else
+    if [ -t 1 ]; then
+        sqlplus -s "$url" @"$1" | $srchighlight
+    else
+        sqlplus -s "$url" @"$1"
+    fi
+fi
+
