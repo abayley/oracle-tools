@@ -2,6 +2,8 @@ declare
     newline Varchar2(1) := chr(13);
     cr Varchar2(1) := chr(10);
 
+    type StringList is table of Varchar(32767);
+
     type QualName is record(
         owner Varchar2(200),
         name Varchar2(200),
@@ -108,12 +110,17 @@ declare
     function get_constraints(desc_owner Varchar2, desc_name Varchar2) return Constraints is
         cons Constraints;
     begin
+        -- not nulls are encoded as C(heck) constraints with names
+        -- starting with SYS_C; we want to ignore these.
+        -- We can also have R, P, and U constraints with names
+        -- starting with SYS_C and SYS_IOT, and we want to include these.
         select c.* bulk collect into cons
         from sys.all_constraints c
         where 1=1
         and c.owner = desc_owner
         and c.table_name = desc_name
-        and c.constraint_name not like 'SYS%'
+        and c.constraint_type in ('C', 'U', 'P', 'R')
+        and not (c.constraint_type = 'C' and constraint_name like 'SYS_C%')
         order by c.constraint_name
         ;
         return cons;
@@ -132,16 +139,17 @@ declare
         join sys.all_ind_columns ic on 1=1
             and ic.table_name = desc_name
             and ic.table_owner = desc_owner
-            and not exists
-            (
-                select c.index_name
-                from sys.all_constraints c
-                where 1=1
-                and c.constraint_type in ('P', 'U')
-                and c.index_name = ic.index_name
-                and c.table_name = ic.table_name
-                and c.owner = ic.index_owner
-            )
+            -- why exclude unique and primary constraint index columns?
+            -- and not exists
+            -- (
+            --     select c.index_name
+            --     from sys.all_constraints c
+            --     where 1=1
+            --     and c.constraint_type in ('P', 'U')
+            --     and c.index_name = ic.index_name
+            --     and c.table_name = ic.table_name
+            --     and c.owner = ic.index_owner
+            -- )
         order by ic.index_name, ic.column_position
         ;
         return index_cols;
@@ -316,8 +324,7 @@ declare
         for i in 1..fk_cols.count loop
             if fk_cols(i).column_name = col then
                 c := fk_cols(i);
-                return lower(c.r_owner || '.' || c.r_table_name || '.' || c.r_column_name
-                    || ' (' || c.constraint_name || ')');
+                return lower(c.constraint_name || ' -> ' || c.r_owner || '.' || c.r_table_name || '.' || c.r_column_name);
             end if;
         end loop;
         return '';
@@ -378,8 +385,6 @@ declare
         if obj_deps.count > 0 then
             emitln('');
             emitln(prefix || 'Referenced by:');
-            -- emit_deps_type(obj_deps, null, prefix);
-            -- return;
             emit_deps_type(obj_deps, 'View', prefix);
             emit_deps_type(obj_deps, 'Trigger', prefix);
             emit_deps_type(obj_deps, 'Package', prefix);
@@ -407,23 +412,15 @@ declare
         and (s.line <= max_line or max_line = 0)
         order by s.name, s.type, s.line
         ;
-        emit_header Boolean := True;
     begin
+        emitln('');
         for s in source loop
-            if emit_header then
-                emit_header := False;
-                emitln('');
-                emit('create or replace ');
+            if s.line = 1 then
+                emit('create or replace ' || s.text);
+            else
+                emit(s.text);
             end if;
-            emit(s.text);
         end loop;
-        if not emit_header then
-            emitln('');
-            emitln('/');
-            emitln('show errors');
-            emitln('');
-            emit_privs(desc_owner, desc_name);
-        end if;
     end;
 
 
@@ -474,11 +471,12 @@ declare
 
     procedure desc_package(desc_owner Varchar2, desc_name Varchar2, full Boolean) is
     begin
-        emit_deps(desc_owner, desc_name, True);
-        desc_source('PACKAGE', desc_owner, desc_name);
         if full then
-            emitln('');
+            -- emitln('');
             desc_source('PACKAGE BODY', desc_owner, desc_name);
+        else
+            emit_deps(desc_owner, desc_name, True);
+            desc_source('PACKAGE', desc_owner, desc_name);
         end if;
     end;
 
@@ -534,12 +532,13 @@ declare
             -- , after_statement
             -- , instead_of_row
             , t.triggering_event
+            , t.status
         from sys.all_triggers t
         where t.table_owner = tbl_owner and t.table_name = tbl_name
         ;
     begin
         for t in triggers loop
-            emitln(lower('trigger ' || t.owner || '.' || t.trigger_name || ' ' || t.triggering_event || ' ' || t.trigger_type));
+            emitln(lower('trigger ' || t.owner || '.' || t.trigger_name || ' ' || t.triggering_event || ' ' || t.trigger_type) || ' ' || t.status);
         end loop;
     end;
 
@@ -601,7 +600,6 @@ declare
         if ix.uniqueness = 'UNIQUE' then
             uniqueness := ' unique';
         end if;
-        uniqueness := ' ' || ix.uniqueness;
         emitln(lower(ix.index_type) || ' index ' || lower(ix.index_name) || uniqueness || ' (' || format_index_cols(ix, ix_cols) || ')');
     end;
 
@@ -705,9 +703,9 @@ declare
             nulls := ' not null';
         end if;
         if col.default_length > 0 then
-            defalt := ' default ' || to_char(col.data_default);
+            defalt := ' default ' || trim(to_char(col.data_default));
         end if;
-        datatype := substr(lower(col.data_type) || parens || nulls || defalt, 1, 35);
+        datatype := substr(lower(col.data_type) || parens || defalt || nulls, 1, 35);
         --
         pk := col_in_cons(col.column_name, 'P', cons, cons_cols);
         uq := col_in_cons(col.column_name, 'U', cons, cons_cols);
@@ -817,7 +815,7 @@ declare
         emitln(' (' || table_attribs(table_dtl, pk_tablespace) || ')');
         emit_object_comment(desc_owner, desc_name);
         emitln('---------------------------------+----+----+----+----------------------------------+-----------------------------');
-        emitln('column                           | PK | Uq | Ix | type                             | FKs');
+        emitln('column                           | PK | Uq | Ix | type                             | FK');
         emitln('---------------------------------+----+----+----+----------------------------------+-----------------------------');
 
         for i in 1..tab_cols.count loop
@@ -829,6 +827,16 @@ declare
         if cons.count + indxes.count > 0 then
             emitln('');
         end if;
+        for i in 1 .. cons.count loop
+            if cons(i).constraint_type = 'P' then
+                for j in 1 .. indxes.count loop
+                    if nvl(cons(i).index_owner, cons(i).owner) = indxes(j).owner
+                        and cons(i).index_name = indxes(j).index_name then
+                        emit_index(indxes(j), ix_cols);
+                    end if;
+                end loop;
+            end if;
+        end loop;
         for i in 1 .. cons.count loop
             if cons(i).constraint_type = 'U' then
                 emit_uq_cons(cons(i), cons_cols, index_tablespace(cons(i).constraint_name, indxes));
@@ -847,8 +855,8 @@ declare
             end loop;
         end if;
         emit_table_triggers(desc_owner, desc_name);
-        emit_privs(desc_owner, desc_name);
         if full then
+            emit_privs(desc_owner, desc_name);
             emit_deps(desc_owner, desc_name);
         end if;
         emitln('-----------------------------------------------------------------------------------------------------------------');
@@ -1049,4 +1057,3 @@ begin
     end if;
 end;
 /
-

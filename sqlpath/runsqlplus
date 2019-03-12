@@ -1,3 +1,4 @@
+#!/bin/bash
 # If no args and stdin is tty then assume an interactive mode (use rlwrap, don't pass -s):
 #
 # stdin  stdout   command
@@ -33,26 +34,28 @@ then
     exit 1
 fi
 
-srchighlight="source-highlight --src-lang=sql --out-format=esc256 --style-file=esc-madeofcode256.style"
+srchighlight="source-highlight --src-lang=sql --out-format=esc --style-file=esc.style"
+#srchighlight="source-highlight --src-lang=sql --out-format=esc256 --style-file=esc-madeofcode256.style"
+
 
 url=$1
 shift
-if [ $# -eq 0 ]
-then
-    sqlpluscmd="sqlplus -s"
-    if [ -t 0 ]; then
-        sqlpluscmd="rlwrap sqlplus"
+if [ $# -eq 0 ]; then  # no args, so stdin could by tty or pipe
+    # assume stdin is a pipe initially
+    sqlpluscmd="exec stdbuf -oL sqlplus -s"
+    if [ -t 0 ]; then  # "-t 0" is true when stdin is a tty
+        sqlpluscmd="exec rlwrap sqlplus"
     fi
-    if [ ! -t 0 ] && [ -t 1 ]; then
+    if [ ! -t 0 ] && [ -t 1 ]; then # stdin is a pipe and stdout is a tty
         $sqlpluscmd "$url" | $srchighlight
-    else
+    else  # both stdin and stdout are pipes, stdin is tty and stdout is pipe, stdin is tty and stdout is tty
         $sqlpluscmd "$url"
     fi
-else
-    if [ -t 1 ]; then
-        sqlplus -s "$url" @"$1" | $srchighlight
-    else
-        sqlplus -s "$url" @"$1"
+else  # file given as arg
+    if [ -t 1 ]; then  # stdout to tty
+        exec stdbuf -oL sqlplus -s "$url" @"$1" | $srchighlight
+    else  # stdout to pipe
+        exec stdbuf -oL sqlplus -s "$url" @"$1"
     fi
 fi
 
