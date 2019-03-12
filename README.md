@@ -31,7 +31,7 @@ If you're using sqlplus directly from the terminal, run with rlwrap:
 
     rlwrap sqlplus username/password@oracle.server:1521/sid
 
-Before you do, though, create an RLWRAP_HHOME folder and set permissions so that only you can see it.
+Before you do, though, create an RLWRAP_HOME folder and set permissions so that only you can see it.
 That's because rlwrap stores everything in a history file, including console-entered passwords.
 
     mkdir $HOME/.rlwrap
@@ -62,7 +62,8 @@ I use a worker script - $SQLPATH/runsqlplus - and an invoker script for each log
 
 This is an example invoker script:
 
-    $SQLPATH/runsqlplus username/password@\"oracle.server:1521/sid\" $*
+    #!/bin/bash
+    exec $SQLPATH/runsqlplus username/password@\"oracle.server:1521/sid\" $*
 
 I have this in my $HOME/.bin directory, which is in my path. The directory and the scripts all have permissions 700.
 
